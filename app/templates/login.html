@@ -5,7 +5,7 @@
 </head>
 <body>
     <h1>Login</h1>
-    <form method="POST" action="/login">
+    <form method="POST" action="/login" onsubmit="captureTiming()">
         <p>
             <label>Username:</label><br>
             <input type="text" name="username" required>
@@ -14,7 +14,20 @@
             <label>Password:</label><br>
             <input type="password" name="password" required>
         </p>
+        <!-- hidden field that will carry the timing value -->
+        <input type="hidden" name="time_taken" id="time_taken">
         <button type="submit">Log in</button>
     </form>
+
+    <script>
+        // record the moment the page loaded
+        let startTime = Date.now();
+
+        // when the form is submitted, work out how long it took
+        function captureTiming() {
+            let elapsed = (Date.now() - startTime) / 1000; // seconds
+            document.getElementById("time_taken").value = elapsed;
+        }
+    </script>
 </body>
 </html>
