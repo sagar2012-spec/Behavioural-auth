@@ -34,3 +34,24 @@ def timing_similarity(username, new_time):
     # within 1 unit is very good, beyond 3 units is very poor
     score = max(0, 100 - (distance * 33))
     return round(score, 1)
+
+def location_similarity(username, new_location):
+    """Score how familiar a login location is for this user, 0 to 100."""
+    conn = sqlite3.connect("behaviour.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT location FROM logins WHERE username = ?", (username,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    locations = [r[0] for r in rows]
+
+    if len(locations) < 3:
+        return None  # not enough history yet
+
+    # how many past logins were from this same location?
+    same = locations.count(new_location)
+    familiarity = same / len(locations)  # 0 to 1
+
+    # turn into a 0-100 score
+    score = familiarity * 100
+    return round(score, 1)
