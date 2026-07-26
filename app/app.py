@@ -1,11 +1,12 @@
 from flask import Flask, render_template, request, redirect
-from database import init_db, save_login
+from database import init_db, save_login, init_patterns, save_pattern, get_pattern
 from scoring import timing_similarity
 from scoring import timing_similarity, location_similarity
 import random
 
 app = Flask(__name__)
 init_db()
+init_patterns()
 
 @app.route("/")
 def home():

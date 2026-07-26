@@ -26,3 +26,37 @@ def save_login(username, time_taken, ip_address, location):
     )
     conn.commit()
     conn.close()
+
+def init_patterns():
+    conn = sqlite3.connect("behaviour.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS patterns (
+            pattern_id TEXT PRIMARY KEY,
+            username TEXT,
+            signal TEXT,
+            value TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def save_pattern(pattern_id, username, signal, value):
+    conn = sqlite3.connect("behaviour.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR REPLACE INTO patterns (pattern_id, username, signal, value) VALUES (?, ?, ?, ?)",
+        (pattern_id, username, signal, value)
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_pattern(pattern_id):
+    conn = sqlite3.connect("behaviour.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM patterns WHERE pattern_id = ?", (pattern_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
