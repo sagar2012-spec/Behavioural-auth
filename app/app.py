@@ -1,10 +1,19 @@
 from flask import Flask, render_template, request, redirect
 from database import init_db, save_login, init_patterns, save_pattern, get_pattern
-from scoring import timing_similarity
 from scoring import timing_similarity, location_similarity
 from patterns import build_timing_pattern, enrol_pattern, verify_pattern
-from database import get_pattern
+from keystroke_signal import keystroke_score, columns
+import pandas as pd
 import random
+
+# load CMU data once so we can pull a keystroke sample per login
+keystroke_data = pd.read_csv("../ml/DSL-StrongPasswordData.csv")
+
+def get_keystroke_sample(genuine=True):
+    """Return one keystroke timing sample. genuine=True uses the enrolled profile."""
+    subject = "s002" if genuine else "s020"
+    row = keystroke_data[keystroke_data["subject"] == subject][columns].sample(1)
+    return row.iloc[0].tolist()
 
 app = Flask(__name__)
 init_db()
@@ -29,8 +38,8 @@ def login():
         pattern_id = f"{username}_timing"
         stored = get_pattern(pattern_id)
 
+        # still enrolling if no pattern yet
         if stored is None:
-            # no pattern yet, still enrolling
             save_login(username, time_taken, ip_address, location)
             pattern = build_timing_pattern(username)
             if pattern:
@@ -40,16 +49,36 @@ def login():
                 print(f"[{username}] Enrolling, need more logins")
             return redirect("/dashboard")
 
-        # STEP 1: similarity check (local)
-        score = timing_similarity(username, time_taken)
+        # --- SIGNALS ---
 
-        # STEP 2: integrity check (blockchain)
+        # signal 1: timing similarity (local)
+        timing_score = timing_similarity(username, time_taken)
+
+        # signal 2: keystroke (scored against enrolled CMU profile)
+        ks_sample = get_keystroke_sample(genuine=True)
+        ks_score = keystroke_score(ks_sample)
+
+        # integrity check (blockchain)
         intact = verify_pattern(pattern_id)
 
-        # a signal only passes if BOTH are true
-        passed = (score is not None and score >= 60) and intact
+        # --- VOTE: majority of implemented signals must pass ---
+        votes = 0
+        total = 0
 
-        print(f"[{username}] similarity={score} intact={intact} -> {'PASS' if passed else 'FAIL'}")
+        if timing_score is not None:
+            total += 1
+            if timing_score >= 60:
+                votes += 1
+
+        if ks_score is not None:
+            total += 1
+            if ks_score >= 60:
+                votes += 1
+
+        # need a majority of signals to pass AND the integrity check intact
+        passed = intact and votes > total / 2
+
+        print(f"[{username}] timing={timing_score} keystroke={ks_score} intact={intact} -> {votes}/{total} passed -> {'PASS' if passed else 'FAIL'}")
         if not intact:
             print(f"[{username}] WARNING: stored pattern has been tampered with")
 
