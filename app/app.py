@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, redirect
 from database import init_db, save_login, init_patterns, save_pattern, get_pattern
 from scoring import timing_similarity
 from scoring import timing_similarity, location_similarity
+from patterns import build_timing_pattern, enrol_pattern, verify_pattern
+from database import get_pattern
 import random
 
 app = Flask(__name__)
@@ -24,33 +26,36 @@ def login():
         ip_address = random.choice(fake_ips)
         location = random.choice(fake_locations)
 
-       # score both signals against the user's past pattern
-        timing_score = timing_similarity(username, time_taken)
-        location_score = location_similarity(username, location)
+        pattern_id = f"{username}_timing"
+        stored = get_pattern(pattern_id)
 
-        # save this login so patterns keep growing
-        save_login(username, time_taken, ip_address, location)
-
-        # only vote once we have enough history
-        if timing_score is None or location_score is None:
-            print(f"[{username}] Still learning, not enough data yet.")
-        else:
-            # each signal passes if it scores 60 or more
-            votes = 0
-            if timing_score >= 60:
-                votes += 1
-            if location_score >= 60:
-                votes += 1
-
-            print(f"[{username}] timing={timing_score} location={location_score} -> {votes}/2 signals passed")
-
-            # with two signals for now, require both to pass
-            if votes >= 2:
-                print(f"[{username}] ACCEPTED")
+        if stored is None:
+            # no pattern yet, still enrolling
+            save_login(username, time_taken, ip_address, location)
+            pattern = build_timing_pattern(username)
+            if pattern:
+                enrol_pattern(username, "timing", pattern)
+                print(f"[{username}] Pattern created and anchored on chain")
             else:
-                print(f"[{username}] FLAGGED - behaviour does not match")
+                print(f"[{username}] Enrolling, need more logins")
+            return redirect("/dashboard")
 
+        # STEP 1: similarity check (local)
+        score = timing_similarity(username, time_taken)
+
+        # STEP 2: integrity check (blockchain)
+        intact = verify_pattern(pattern_id)
+
+        # a signal only passes if BOTH are true
+        passed = (score is not None and score >= 60) and intact
+
+        print(f"[{username}] similarity={score} intact={intact} -> {'PASS' if passed else 'FAIL'}")
+        if not intact:
+            print(f"[{username}] WARNING: stored pattern has been tampered with")
+
+        save_login(username, time_taken, ip_address, location)
         return redirect("/dashboard")
+
     return render_template("login.html")
 
 @app.route("/dashboard")
