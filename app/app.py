@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect
-from database import init_db, save_login, init_patterns, save_pattern, get_pattern
+from database import init_db, save_login, init_patterns, save_pattern, get_pattern, init_results, save_result, get_results
 from scoring import timing_similarity, location_similarity
 from patterns import build_timing_pattern, enrol_pattern, verify_pattern, update_pattern
 from keystroke_signal import keystroke_score, columns
@@ -18,6 +18,7 @@ def get_keystroke_sample(genuine=True):
 app = Flask(__name__)
 init_db()
 init_patterns()
+init_results()
 
 @app.route("/")
 def home():
@@ -85,10 +86,14 @@ def login():
         # save this login
         save_login(username, time_taken, ip_address, location)
 
-        # adaptive learning: only learn from logins that passed
+       # adaptive learning: only learn from logins that passed
+        drift_result = "not checked"
         if passed:
-            result = update_pattern(username)
-            print(f"[{username}] drift check: {result}")
+            drift_result = update_pattern(username)
+            print(f"[{username}] drift check: {drift_result}")
+
+        # record this login's outcome for the dashboard
+        save_result(username, timing_score, ks_score, intact, votes, total, passed, drift_result)
 
         return redirect("/dashboard")
 
@@ -96,7 +101,8 @@ def login():
 
 @app.route("/dashboard")
 def dashboard():
-    return "<h1>Dashboard</h1><p>You are logged in.</p>"
+    results = get_results()
+    return render_template("dashboard.html", results=results)
 
 if __name__ == "__main__":
     app.run(debug=True)

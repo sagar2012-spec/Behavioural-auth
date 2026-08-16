@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background: #f4f4f4; }
+        h1 { color: #2E5C8A; }
+        table { border-collapse: collapse; width: 100%; background: white; }
+        th, td { padding: 10px; text-align: center; border-bottom: 1px solid #ddd; }
+        th { background: #2E5C8A; color: white; }
+        .pass { color: #2E7D46; font-weight: bold; }
+        .fail { color: #B5290B; font-weight: bold; }
+        .tampered { color: #B5290B; }
+    </style>
+</head>
+<body>
+    <h1>Behavioural Authentication Dashboard</h1>
+    <p>Showing the most recent login attempts processed by the system.</p>
+    <table>
+        <tr>
+            <th>Time</th>
+            <th>User</th>
+            <th>Timing</th>
+            <th>Keystroke</th>
+            <th>Integrity</th>
+            <th>Vote</th>
+            <th>Result</th>
+            <th>Drift</th>
+        </tr>
+        {% for r in results %}
+        <tr>
+            <td>{{ r[8] }}</td>
+            <td>{{ r[0] }}</td>
+            <td>{{ r[1] }}</td>
+            <td>{{ r[2] }}</td>
+            <td>{% if r[3] == 1 %}Intact{% else %}<span class="tampered">Tampered</span>{% endif %}</td>
+            <td>{{ r[4] }}/{{ r[5] }}</td>
+            <td>{% if r[6] == 1 %}<span class="pass">PASS</span>{% else %}<span class="fail">FAIL</span>{% endif %}</td>
+            <td>{{ r[7] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

@@ -60,3 +60,44 @@ def get_pattern(pattern_id):
     row = cursor.fetchone()
     conn.close()
     return row[0] if row else None
+
+def init_results():
+    conn = sqlite3.connect("behaviour.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            timing_score REAL,
+            keystroke_score REAL,
+            intact INTEGER,
+            votes INTEGER,
+            total INTEGER,
+            passed INTEGER,
+            drift TEXT,
+            timestamp TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def save_result(username, timing_score, keystroke_score, intact, votes, total, passed, drift):
+    conn = sqlite3.connect("behaviour.db")
+    cursor = conn.cursor()
+    from datetime import datetime
+    cursor.execute(
+        "INSERT INTO results (username, timing_score, keystroke_score, intact, votes, total, passed, drift, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (username, timing_score, keystroke_score, int(intact), votes, total, int(passed), drift, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_results():
+    conn = sqlite3.connect("behaviour.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT username, timing_score, keystroke_score, intact, votes, total, passed, drift, timestamp FROM results ORDER BY id DESC LIMIT 50")
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
