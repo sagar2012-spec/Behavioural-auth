@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect
 from database import init_db, save_login, init_patterns, save_pattern, get_pattern
 from scoring import timing_similarity, location_similarity
-from patterns import build_timing_pattern, enrol_pattern, verify_pattern
+from patterns import build_timing_pattern, enrol_pattern, verify_pattern, update_pattern
 from keystroke_signal import keystroke_score, columns
 import pandas as pd
 import random
@@ -82,7 +82,14 @@ def login():
         if not intact:
             print(f"[{username}] WARNING: stored pattern has been tampered with")
 
+        # save this login
         save_login(username, time_taken, ip_address, location)
+
+        # adaptive learning: only learn from logins that passed
+        if passed:
+            result = update_pattern(username)
+            print(f"[{username}] drift check: {result}")
+
         return redirect("/dashboard")
 
     return render_template("login.html")

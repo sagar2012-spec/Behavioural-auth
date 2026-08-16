@@ -46,3 +46,46 @@ def verify_pattern(pattern_id):
     if stored is None:
         return False
     return make_hash(stored) == get_hash(pattern_id)
+
+def pattern_drift(username):
+    """
+    Measure how far the user's current behaviour has drifted from their stored pattern.
+    Returns the drift as a number, or None if there isn't enough to compare.
+    """
+    stored = get_pattern(f"{username}_timing")
+    if stored is None:
+        return None
+
+    # rebuild a fresh pattern from current data
+    fresh = build_timing_pattern(username)
+    if fresh is None:
+        return None
+
+    stored_mean = json.loads(stored)["mean"]
+    fresh_mean = json.loads(fresh)["mean"]
+
+    # drift = how much the average has moved
+    return abs(fresh_mean - stored_mean)
+
+
+def update_pattern(username):
+    """
+    After a PASSED login, update the stored pattern if drift is moderate.
+    Small drift: ignore. Moderate: update and re-anchor. Large: don't learn (suspicious).
+    """
+    drift = pattern_drift(username)
+    if drift is None:
+        return "no update"
+
+    LOW = 0.3   # below this, no meaningful change
+    HIGH = 2.0  # above this, too big to trust as natural drift
+
+    if drift < LOW:
+        return "stable"          # nothing to do
+    elif drift > HIGH:
+        return "large drift, flagged"   # do NOT learn from this
+    else:
+        # moderate drift: update the working pattern and re-anchor its hash
+        fresh = build_timing_pattern(username)
+        enrol_pattern(username, "timing", fresh)
+        return "updated"
