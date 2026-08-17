@@ -55,3 +55,20 @@ def location_similarity(username, new_location):
     # turn into a 0-100 score
     score = familiarity * 100
     return round(score, 1)
+
+def ip_similarity(username, new_ip):
+    """Score how familiar a login IP is for this user, 0 to 100."""
+    conn = sqlite3.connect("behaviour.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT ip_address FROM logins WHERE username = ?", (username,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    ips = [r[0] for r in rows]
+
+    if len(ips) < 3:
+        return None
+
+    same = ips.count(new_ip)
+    familiarity = same / len(ips)
+    return round(familiarity * 100, 1)
