@@ -135,3 +135,37 @@ def get_user(username):
     row = cursor.fetchone()
     conn.close()
     return row[0] if row else None
+
+def get_all_users_stats():
+    """For each user, count their logins, passes, and fails."""
+    conn = sqlite3.connect("behaviour.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT username,
+               COUNT(*) as total,
+               SUM(passed) as passes
+        FROM results
+        GROUP BY username
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    # returns list of (username, total_attempts, passes)
+    return rows
+
+
+def get_overall_stats():
+    """Overall pass/fail counts and average scores across all logins."""
+    conn = sqlite3.connect("behaviour.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT
+            COUNT(*) as total,
+            SUM(passed) as passes,
+            AVG(timing_score) as avg_timing,
+            AVG(keystroke_score) as avg_keystroke,
+            SUM(CASE WHEN intact = 0 THEN 1 ELSE 0 END) as tamper_events
+        FROM results
+    """)
+    row = cursor.fetchone()
+    conn.close()
+    return row

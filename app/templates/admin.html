@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin — Behavioural Authentication</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            padding: 30px;
+        }
+        h1 { color: #58a6ff; margin-bottom: 5px; }
+        .subtitle { color: #8b949e; margin-bottom: 30px; }
+        .cards { display: flex; gap: 20px; margin-bottom: 30px; flex-wrap: wrap; }
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 20px;
+            flex: 1;
+            min-width: 180px;
+        }
+        .card h2 { font-size: 32px; color: #58a6ff; }
+        .card p { color: #8b949e; font-size: 14px; margin-top: 5px; }
+        .panels { display: flex; gap: 20px; flex-wrap: wrap; }
+        .panel {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 20px;
+            flex: 1;
+            min-width: 300px;
+        }
+        .panel h3 { margin-bottom: 15px; color: #e6edf3; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #30363d; }
+        th { color: #8b949e; font-weight: normal; }
+        canvas { max-height: 300px; }
+    </style>
+</head>
+<body>
+    <h1>Behavioural Authentication — Admin Dashboard</h1>
+    <p class="subtitle">Live overview of all users and authentication activity</p>
+
+    <div class="cards">
+        <div class="card">
+            <h2>{{ overall[0] or 0 }}</h2>
+            <p>Total login attempts</p>
+        </div>
+        <div class="card">
+            <h2>{{ overall[1] or 0 }}</h2>
+            <p>Successful authentications</p>
+        </div>
+        <div class="card">
+            <h2>{{ user_stats|length }}</h2>
+            <p>Registered users active</p>
+        </div>
+        <div class="card">
+            <h2>{{ overall[4] or 0 }}</h2>
+            <p>Tamper events detected</p>
+        </div>
+    </div>
+
+    <div class="panels">
+        <div class="panel">
+            <h3>Overall Pass vs Fail</h3>
+            <canvas id="passFailChart"></canvas>
+        </div>
+        <div class="panel">
+            <h3>Login Attempts per User</h3>
+            <canvas id="userChart"></canvas>
+        </div>
+    </div>
+
+    <div class="panel" style="margin-top: 20px;">
+        <h3>Per-User Breakdown</h3>
+        <table>
+            <tr><th>User</th><th>Total Attempts</th><th>Passed</th><th>Failed</th></tr>
+            {% for u in user_stats %}
+            <tr>
+                <td>{{ u[0] }}</td>
+                <td>{{ u[1] }}</td>
+                <td>{{ u[2] or 0 }}</td>
+                <td>{{ u[1] - (u[2] or 0) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <script>
+        const totalPasses = {{ overall[1] or 0 }};
+        const totalFails = {{ (overall[0] or 0) - (overall[1] or 0) }};
+
+        new Chart(document.getElementById('passFailChart'), {
+            type: 'pie',
+            data: {
+                labels: ['Passed', 'Failed'],
+                datasets: [{
+                    data: [totalPasses, totalFails],
+                    backgroundColor: ['#3fb950', '#f85149']
+                }]
+            },
+            options: { plugins: { legend: { labels: { color: '#e6edf3' } } } }
+        });
+
+        const userLabels = [{% for u in user_stats %}'{{ u[0] }}',{% endfor %}];
+        const userTotals = [{% for u in user_stats %}{{ u[1] }},{% endfor %}];
+
+        new Chart(document.getElementById('userChart'), {
+            type: 'bar',
+            data: {
+                labels: userLabels,
+                datasets: [{
+                    label: 'Login attempts',
+                    data: userTotals,
+                    backgroundColor: '#58a6ff'
+                }]
+            },
+            options: {
+                plugins: { legend: { labels: { color: '#e6edf3' } } },
+                scales: {
+                    x: { ticks: { color: '#8b949e' } },
+                    y: { ticks: { color: '#8b949e' } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -4,7 +4,7 @@ from scoring import timing_similarity, location_similarity, ip_similarity
 from patterns import build_timing_pattern, enrol_pattern, verify_pattern, update_pattern
 from keystroke_signal import keystroke_score, columns
 from werkzeug.security import generate_password_hash, check_password_hash
-from database import init_users, create_user, get_user
+from database import init_db, save_login, init_patterns, save_pattern, get_pattern, init_results, save_result, get_results, init_users, create_user, get_user, get_all_users_stats, get_overall_stats
 import pandas as pd
 import random
 
@@ -26,6 +26,13 @@ init_users()
 @app.route("/")
 def home():
     return render_template("home.html")
+
+
+@app.route("/admin")
+def admin():
+    user_stats = get_all_users_stats()
+    overall = get_overall_stats()
+    return render_template("admin.html", user_stats=user_stats, overall=overall)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
