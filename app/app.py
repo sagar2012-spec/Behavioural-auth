@@ -3,6 +3,8 @@ from database import init_db, save_login, init_patterns, save_pattern, get_patte
 from scoring import timing_similarity, location_similarity, ip_similarity
 from patterns import build_timing_pattern, enrol_pattern, verify_pattern, update_pattern
 from keystroke_signal import keystroke_score, columns
+from werkzeug.security import generate_password_hash, check_password_hash
+from database import init_users, create_user, get_user
 import pandas as pd
 import random
 
@@ -19,16 +21,39 @@ app = Flask(__name__)
 init_db()
 init_patterns()
 init_results()
+init_users()
 
 @app.route("/")
 def home():
     return render_template("home.html")
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+
+        password_hash = generate_password_hash(password, method="pbkdf2:sha256")
+        if create_user(username, password_hash):
+            print(f"New user registered: {username}")
+            return redirect("/login")
+        else:
+            return "Username already taken. <a href='/register'>Try again</a>"
+
+    return render_template("register.html")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
+
+        # verify the password first (base authentication)
+        stored_hash = get_user(username)
+        if stored_hash is None or not check_password_hash(stored_hash, password):
+            print(f"[{username}] Login failed: wrong username or password")
+            return "Invalid username or password. <a href='/login'>Try again</a>"
+
         time_taken = float(request.form["time_taken"])
 
        # each user has a stable "home" location and IP, with occasional variation

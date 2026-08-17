@@ -101,3 +101,37 @@ def get_results():
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+def init_users():
+    conn = sqlite3.connect("behaviour.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password_hash TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def create_user(username, password_hash):
+    conn = sqlite3.connect("behaviour.db")
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", (username, password_hash))
+        conn.commit()
+        result = True
+    except sqlite3.IntegrityError:
+        result = False  # username already exists
+    conn.close()
+    return result
+
+
+def get_user(username):
+    conn = sqlite3.connect("behaviour.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT password_hash FROM users WHERE username = ?", (username,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
